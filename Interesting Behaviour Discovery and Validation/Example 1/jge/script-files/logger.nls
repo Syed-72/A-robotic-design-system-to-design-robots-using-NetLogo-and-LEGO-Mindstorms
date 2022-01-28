@@ -1,0 +1,119 @@
+;********************************************************
+; FILENAME: logger.nls
+; DATE    : 27/05/2020, 10:51PM
+; AUTHOR  : Syed Kaleem Aslam
+
+
+;########################################################
+;                    CODE STARTS
+;########################################################
+
+;;Prints the Experiment Logging Information
+TO LOG::PRINT-EXPERIMENT-LOG
+
+  if Show-Output [
+    
+    let best array:item population 0
+    let tmp 0
+    let x 0
+    let flag false
+    
+    print (word "POPULATION OF RUN #" current-run " / GENERATION #" current-generation)
+    
+    set x 0
+    while [x < Population-Size] [
+      set tmp array:item population x 
+      print (word "robot " [who] of tmp ": Fitness Value " [fitness] of tmp ", Moves " [moves] of tmp ", Valid " [valid?] of tmp)  
+      set x (x + 1)    
+    ]
+    
+    print " "
+    ifelse found-goal-state? or current-generation = maximum-generations
+    [ print "###########################################"
+      print "############### RUN SUMMARY ###############"
+      print "###########################################"]
+    [print  "############ GENERATION SUMMARY ###########"]
+    
+    print (word "RUN #"  current-run ", GENERATION #" current-generation ", SCORE " fitness-score)  
+    print word "Valid robots of this Generation: " valid-robots
+    print (word "Best robot(" [who] of best "):")
+    print (word "Fitness = " [fitness] of best ", Moves = " [moves] of best ", Valid = " [valid?] of best)
+    print word "Genotype = " [genotype] of best 
+    print word "Phenotype = "[phenotype] of best 
+    
+    if found-goal-state? or current-generation = maximum-generations
+    [ print "###########################################"
+      print "########### END OF RUN SUMMARY ############"
+      print "###########################################"]
+    
+    
+    ;Print here all the PERFECT SOLUTIONS of a generation    
+    if found-goal-state? [
+      print " "
+      print (word "PERFECT SOLUTIONS OF RUN #" current-run " (GENERATION #" current-generation ")")      
+      set x 0 
+      set tmp ""
+      set flag true
+      while [x  < population-size AND found-goal-state?] [
+        set tmp array:item population x
+        set x x + 1
+        ifelse found-goal-state? [
+          print " "
+          print (word "Perfect robot(" [who] of tmp "):")
+          print (word "Fitness = " [fitness] of tmp ", Moves = " [moves] of tmp ", Valid = " [valid?] of tmp)
+          print word "Genotype = " [genotype] of tmp 
+          print word "Phenotype = "[phenotype] of tmp             
+        ]
+        [
+          set flag false  
+        ]        
+        
+      ] 
+      
+    ]           
+    
+  ]
+  
+    print " "
+    print " "
+    print " "
+    print " "
+    
+  
+  
+END
+
+
+
+;---------------------------------------------------------------------------------------------------------------------------
+
+
+;;Prints the Experiment Result / Best Solution
+TO LOG::PRINT-EXPERIMENT-RESULTS
+    if Show-Output [
+  
+    print "###########################################"
+    print "########### EXPERIMENT RESULTS ############"
+    print "###########################################"
+    print " "      
+          
+    ;print configuration
+    print "EXPERIMENT CONFIGURATION"
+    print (word "Total Runs: " maximum-runs ", Generations Limit: " maximum-generations ", Population Size: " population-size)
+    print (word "Generation Gap: " generation-gap ", Crossover Probability: " crossover ", Mutation Probability: " mutation)
+    print (word "Codon Size: " codon-size ", Minimum Codons: " codon-min ", Maximum Codons: " codon-max ", Wraps Limit: " maximum-wraps) 
+    print (word "robot Steps Limit: " maximum-step-count)
+    print word "BNF Grammar Definition File: " BNF-Grammar-Definition-Path
+    print "BNF Grammar Definition:"
+    print jGE:bnf-grammar "BNF-RULESET"
+    print " "
+    
+    print "BEST SOLUTION (robot)"
+    print (word "Fitness: " array:item solution-best 3 ", Moves: " array:item solution-best 4)
+    print word "Genotype: " array:item solution-best 0 
+    print word "Phenotype: "array:item solution-best 1  
+    print " "  
+        
+  ]    
+END
+

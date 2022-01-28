@@ -1,0 +1,74 @@
+;********************************************************
+; FILENAME: environment-loader.nls
+; DATE    : 27/05/2020, 10:51PM
+; AUTHOR  : Syed Kaleem Aslam
+;
+; DESCRIPTION:
+; -------------------------------------------------------
+; A base for loading in patch data from external files.
+; Data can be loaded from files and then patch data in
+; in this model can be coloured in via those data values.
+;********************************************************
+
+;########################################################
+;                    CODE STARTS
+;########################################################
+
+
+
+;-----------------------------------------------------
+; FUNCTION: set-patch-colours
+; ---------------------------------------------------
+; 
+; DESCRIPTION:
+; ----------------------------------------------------
+; Load in patch data of said filename and then map
+; each colour to the respective patch.
+;-----------------------------------------------------
+TO ENVLOAD::SET-PATCH-COLOURS [filename]
+  ;store patch data in this list
+  let colours ENVLOAD::READ-FROM-FILE (word "maps/" filename ".patches" )
+  
+  ;Read all tuples and then map colour (3rd item), to patch at XY (1st & 2nd)
+  if ( is-list? colours )[
+    foreach ( colours )[x ->
+      ask patch first x item 1 x [
+         set pcolor last x
+      ]
+    ]
+  ]
+END
+
+
+
+
+;-----------------------------------------------------
+; REPORTER: read-from-file
+; ---------------------------------------------------
+; 
+; DESCRIPTION:
+; ----------------------------------------------------
+; Read patch data in tuples of 3 and store in a list,
+; which is returned with the reporter.
+; ---------------------------------------------------
+;
+; RETURNS:
+; ----------------------------------------------------
+; List of patch information
+;-----------------------------------------------------
+TO-REPORT ENVLOAD::READ-FROM-FILE [filename]
+  let patch-list [] ; A list to store file data inside
+  
+  if ( file-exists? filename )[
+    file-open filename ; Open IO pipeline to the file
+    
+    while [ not file-at-end? ][
+      ;Append file contents to the list as one long uniform sentence
+      set patch-list sentence patch-list (list (list file-read file-read file-read))
+    ]
+    
+    file-close ;Finished with file >> Release all IO resources
+  ]
+  
+  report patch-list ;Return file contents as a list
+END

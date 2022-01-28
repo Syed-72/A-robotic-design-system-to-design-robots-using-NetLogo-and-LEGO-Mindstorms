@@ -1,0 +1,220 @@
+;********************************************************
+; FILENAME: explorer.nls
+; DATE    : 01/07/2021, 12:21PM
+; AUTHOR  : Syed Kaleem Aslam
+;
+; DESCRIPTION:
+; -------------------------------------------------------
+; Reporters and functions which collect data
+; from sensors and send commands to robots. 
+; Together, these functions can generate code
+; to find interesting behaviour without any 
+; observer input.
+;********************************************************
+
+
+;########################################################
+;                    CODE STARTS
+;########################################################
+
+
+TO ROBOT::FORWARD
+  if(draw-trail)[ pen-down ]
+  if steps < maximum-step-count [ ;and (found-goal-state? = false) [ ; and garbage-collected < garbage-amount [
+    if [pcolor] of patch-ahead 1 != 15
+    [
+      fd 0.5
+    ]
+    set steps steps + 1
+    CHECK-FOR-GOAL
+    
+    count-visits
+  ]
+END
+
+TO ROBOT::LEFT [angle]
+  if steps < maximum-step-count [;and (found-goal-state? = false) [ ; and garbage-collected < garbage-amount [
+    left angle
+    set steps steps + 1
+    set turn-counter turn-counter + 1
+    CHECK-FOR-GOAL
+    
+    count-visits
+  ]
+END
+
+TO ROBOT::RIGHT [angle]
+  if steps < maximum-step-count [;and (found-goal-state? = false) [ ; and garbage-collected < garbage-amount [
+    right angle
+    set steps steps + 1
+    set turn-counter turn-counter + 1
+    CHECK-FOR-GOAL
+    
+    count-visits
+  ]
+END
+
+TO ROBOT::TURN-AROUND
+  if steps < maximum-step-count [ ; and garbage-collected < garbage-amount [
+    set heading heading - 180
+    set steps steps + 1
+    set turn-counter turn-counter + 1
+    CHECK-FOR-GOAL
+    
+    fd 2
+    count-visits
+  ]
+END
+
+TO-REPORT ROBOT::OBSTACLE-AHEAD?
+  
+  ;let amount (count patches in-cone 3 35 with [is-wall? = true]);
+
+  
+  let flag ([is-wall?] of patch-ahead 1) = true;
+  if(flag)[
+    set obstacle-infront-counter obstacle-infront-counter + 1
+  ]
+
+
+  report flag
+END
+
+
+to-report ROBOT::COLOUR-AHEAD? [colours]
+; The ant performs the sensing step of checking if the trail
+; directly ahead.
+
+  report ([pcolor] of patch-ahead 1) = colours
+end
+
+
+;to-report ROBOT::COLOUR-AHEAD? 
+;; The ant performs the sensing step of checking if the trail
+;; directly ahead.
+;
+;  report ([pcolor] of patch-ahead 1) = 9.9
+;end
+;
+;to-report ROBOT::COLOUR-AHEAD2? 
+;; The ant performs the sensing step of checking if the trail
+;; directly ahead.
+;
+;  report ([pcolor] of patch-ahead 1) = 45
+;end
+;
+;to-report ROBOT::COLOUR-AHEAD3? 
+;; The ant performs the sensing step of checking if the trail
+;; directly ahead.
+;
+;  report ([pcolor] of patch-ahead 1) = 95
+;end
+;
+;to-report ROBOT::COLOUR-AHEAD4? 
+;; The ant performs the sensing step of checking if the trail
+;; directly ahead.
+;
+;  report ([pcolor] of patch-ahead 1) = 55
+;end
+;
+;to-report ROBOT::COLOUR-AHEAD5? 
+;; The ant performs the sensing step of checking if the trail
+;; directly ahead.
+;
+;  report ([pcolor] of patch-ahead 1) = 15
+;end
+
+TO CHECK-FOR-GOAL
+  set found-goal-state? ([goal-location?] of patch-here = true)
+END
+
+
+
+
+
+
+;to calculate-codelength1
+;
+;  let counts [Pcounter] of patches; with [pcolor = lime]
+;
+;  ;let entropy 0.0
+;  ;set entropy 0.0
+;  set calculation 0.0
+;  let total 0
+;  let adjusted-count 0
+;  let prob 0.0
+;  let neglogprob 0.0
+;
+;  foreach counts
+;  [ my-count ->
+;    set total total + my-count + 1]
+;
+;  foreach counts
+;  [ my-count ->
+;    set adjusted-count my-count + 1
+;    set prob (adjusted-count / total)
+;    set neglogprob (- log prob 2)
+;    set calculation calculation + adjusted-count * neglogprob
+;    ; print (word my-count " " neglogprob)
+;
+;;    ifelse (type-of-calculation = "Entropy")
+;;      [ set calculation calculation + prob * neglogprob ]
+;;      [ ifelse (type-of-calculation = "Codelength")
+;;        [ set calculation calculation + neglogprob ]
+;;        [ set calculation calculation + adjusted-count * neglogprob ]
+;      ]
+;;  ]
+;
+;;  print (word type-of-calculation " = " (precision calculation 3))
+;end
+
+
+to-report calculate-codelength2
+
+  let Pcounts [Pcounter] of patches; with [pcolor = lime]
+
+  ;let entropy 0.0
+  ;set entropy 0.0
+  let calc 0.0
+  let total 0
+  let adjusted-count 0
+  let prob 0.0
+  let neglogprob 0.0
+  let probfactor 500000
+  
+ 
+  foreach Pcounts
+  [ my-count ->
+    set total total + my-count * probfactor + 1]
+
+  foreach Pcounts
+  [ my-count ->
+    set adjusted-count my-count * probfactor + 1
+    set prob (adjusted-count / total)
+    set neglogprob (- log prob 2)
+    set calc calc + adjusted-count * neglogprob
+  ]
+;if calc > Least-Interesting and calc < Most-Interesting
+;  [
+;      export-view (word calc ".png")
+;;      export-interface (word calc ".png")
+;;      export-output "Parameters"
+;    ]
+;  if calc < 0.50559637855928206E9 
+;  [
+;      export-view (word calc ".png")
+;      export-interface (word calc ".png")
+;      export-output "Parameters"
+;    ]
+  if  calc > 1.042932502279913E9
+  [
+;;      export-view (word calc ".png")
+ ;     export-interface (word calc ".png")
+;;      export-output "Parameters"
+    ]
+  report calc  
+  
+
+end
+
+

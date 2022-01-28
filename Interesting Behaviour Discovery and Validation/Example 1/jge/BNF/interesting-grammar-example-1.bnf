@@ -1,0 +1,8 @@
+<expr> ::= <actions> | <expr> <actions>
+<actions> ::= <sensingaction1> | <sensingaction2> | <sensingaction3> | <sensingaction4> | <turn> | ROBOT::FORWARD
+<sensingaction1> ::= ifelse (ROBOT::COLOUR-AHEAD-WHITE?) [ ROBOT::RIGHT <angle> ][ ROBOT::FORWARD ]
+<sensingaction2> ::= ifelse (ROBOT::COLOUR-AHEAD-YELLOW?) [ ROBOT::RIGHT <angle> ][ ROBOT::FORWARD ]
+<sensingaction3> ::= ifelse (ROBOT::COLOUR-AHEAD-BLUE?) [ ROBOT::RIGHT <angle> ][ ROBOT::FORWARD ]
+<sensingaction4> ::= ifelse (ROBOT::COLOUR-AHEAD-GREEN?) [ ROBOT::LEFT <angle> ][ ROBOT::FORWARD ]
+<turn> ::= ROBOT::RIGHT <angle> | ROBOT::LEFT <angle>
+<angle> ::= 30 | 60 | 90 | 120

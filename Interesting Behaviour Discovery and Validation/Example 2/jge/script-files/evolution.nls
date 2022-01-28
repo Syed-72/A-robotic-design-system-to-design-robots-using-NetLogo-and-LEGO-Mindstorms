@@ -1,0 +1,635 @@
+;********************************************************
+; FILENAME: evolution.nls
+; DATE    : 01/07/2021, 12:21PM
+; AUTHOR  : Syed Kaleem Aslam
+;
+; DESCRIPTION:
+; -------------------------------------------------------
+; Reporters and functions which all centre around
+; evolution. Together, these functions can generate code
+; to solve problems without any observer input.
+;********************************************************
+
+
+;########################################################
+;                    CODE STARTS
+;########################################################
+
+
+
+
+
+;Setups the trail to run the solution
+to EVO::SETUP-SIMULATION-TRAIL
+  
+  if run-pressed = 0 [
+    print "MESSAGE: Press first the \"Go\" button and let it finish." 
+    stop
+  ]
+  
+  set setup-sft-pressed 1
+  
+  
+  clear-turtles
+  clear-drawing
+  
+        ask patches
+          [
+            set plabel " "
+            set Pcounter 0
+          ] 
+  
+    
+  create-explorers 1 [
+    set shape "explorer"
+    set size 2
+    set xcor 28
+    set ycor -28
+    set heading 315
+    set color blue
+    
+    
+    set genotype array:item solution-best 0
+    set phenotype array:item solution-best 1
+    set valid? array:item solution-best 2
+    set fitness array:item solution-best 3
+    set moves array:item solution-best 4
+    
+  ]
+
+    
+  set steps 0
+  set found-goal-state? false
+  set turn-counter 0
+  set obstacle-infront-counter 0
+  
+END
+
+
+;Simulates on the screen the best solution found
+to EVO::SOLUTION-SIMULATION
+  clear-drawing 
+  
+  if setup-sft-pressed = 0 [
+    print "MESSAGE: Press first the \"Setup Trail\" button." 
+    stop
+  ]
+  set setup-sft-pressed 0
+    
+  wait 0.1  
+  if [valid?] of explorer 0 = true [
+    EVO::SIMULATE 0
+    ask explorer 0 [show-turtle]  
+  ]
+  
+end
+
+
+
+;Setups the trail to run the solution
+to EVO::SETUP-CUSTOM-SIM-TRAIL
+  
+  
+  set setup-sft-pressed 1
+  
+  ;produce values for custom setup
+
+      ask patches
+          [
+            set plabel " "
+            set Pcounter 0
+          ]
+  
+  clear-turtles
+  clear-drawing  
+    
+  create-explorers 1 [
+    set shape "wheel"
+    set size 2
+    set xcor 28
+    set ycor -28
+    set heading 315
+    set color blue
+    
+    set genotype array:item solution-best 0
+    set phenotype custom-code
+    set valid? array:item solution-best 2
+    set fitness array:item solution-best 3
+    set moves array:item solution-best 4
+    
+  ]
+  set steps 0
+  set found-goal-state? false
+  set turn-counter 0
+  set obstacle-infront-counter 0
+  
+END
+
+
+
+
+
+
+;-----------------------------------------------------
+; FUNCTION: load-bnf-rules
+; ---------------------------------------------------
+; 
+; DESCRIPTION:
+; ----------------------------------------------------
+; Loads in a BNF ruleset from file, parses it and
+; creates a definition.
+;-----------------------------------------------------
+TO EVO::LOAD-BNF-RULES
+  jGE:load-bnf BNF-Grammar-Definition-Path "BNF-RULESET"  
+END
+
+
+
+
+
+;-----------------------------------------------------
+; FUNCTION: create-population
+; ---------------------------------------------------
+; 
+; DESCRIPTION:
+; ----------------------------------------------------
+; Create an initial population
+;-----------------------------------------------------
+to EVO::CREATE-POPULATION [amount]
+  ;Create N amount of explorers, but hide them
+  EVO::CREATE-EXPLORER-BOTS amount true
+end
+
+
+
+
+
+
+
+
+
+
+
+;-----------------------------------------------------
+; FUNCTION: steady-state-genetic-algorithm
+; ---------------------------------------------------
+; 
+; DESCRIPTION:
+; ----------------------------------------------------
+; Evolve a generation using an SSGA algorithm
+;-----------------------------------------------------
+TO EVO::STEADY-STATE-GENETIC-ALGORITHM
+  ; # of individuals to be replaced
+  let replacements EVO::NORMALISE-GAP  
+  
+  ; Array of genomes for new population
+  let children-genomes ""         
+  
+  ; Counter - # of children created
+  let children-number 0          
+  
+  ; Genome of 1st selected parent
+  let p1Genome ""
+  
+  ; Genome of 2nd selected parent
+  let p2Genome ""
+  
+  ; Genome of 1st new child
+  let c1Genome ""
+  
+  ; Genome of 2nd new child
+  let c2Genome ""
+  
+  let tmp ""                      ;; Temporal variable
+  let counter 0                   ;; Temporal variable
+  
+  
+  EVO::EVALUATE-POPULATION
+  
+  
+  while [current-generation < maximum-generations] [ ; + fitness condition
+    
+    set current-generation current-generation + 1    
+    set children-genomes EVO::CREATE-GENOME-POOL
+    set children-number 0
+    
+    while [children-number < replacements] [
+      
+      ;select two parents
+      set tmp EVO::ROULETTE-WHEEL
+      set p1Genome item 0 tmp
+      set p2Genome item 1 tmp
+      
+      ;create two children with crossover
+      set tmp jGE:crossover p1Genome p2Genome crossover
+      set c1Genome item 0 tmp
+      set c2Genome item 1 tmp       
+      
+      ;mutate children
+      set c1Genome jGE:mutation c1Genome mutation
+      set c2Genome jGE:mutation c2Genome mutation
+      
+      ;add the two offspring to the genome pool (stuffing from the end)     
+      array:set children-genomes ((population-size - 1) - children-number) c1Genome
+      array:set children-genomes ((population-size - 1) - children-number - 1) c2Genome
+      set children-number children-number + 2   
+    ]
+    
+    
+    
+    
+    ;add the best parents to the next generation
+    set tmp EVO::BEST-INDIVIDUALS (population-size - replacements)
+    set counter 0
+    foreach tmp [c ->
+      array:set children-genomes counter c
+      set counter counter + 1
+    ]
+    
+    ;replace parent population with the children population
+    EVO::CREATE-CHILD-POPULATION children-genomes
+    
+    ;evaluate the children population
+    EVO::EVALUATE-POPULATION
+  ]
+  
+  
+END
+
+
+
+
+;-----------------------------------------------------
+; FUNCTION: evaluate-population
+; ---------------------------------------------------
+; 
+; DESCRIPTION:
+; ----------------------------------------------------
+; Evaluates fitness of the current population (PARENT)
+;-----------------------------------------------------
+TO EVO::EVALUATE-POPULATION
+  ; Variable to store the fittest member of the pop.
+  let best 0
+  
+  ; Reset valid-robots counter
+  set valid-robots 0
+  
+  ;Loop - evaluate each individual
+  let index 0
+  while [index < population-size] [
+    EVO::EVALUATE index
+    set index (index + 1)
+  ]  
+  
+  ;Sort the population in DESCENDING ORDER of fitness
+  set population array:from-list sort-by [[x1 x2] -> [fitness] of x1 > [fitness] of x2] explorers
+  
+  ;Get the fittest robot from the front of the list
+  set best array:item population 0
+  array:set solution 0 [genotype] of best
+  array:set solution 1 [phenotype] of best
+  array:set solution 2 [valid?] of best
+  array:set solution 3 [fitness] of best
+  array:set solution 4 [moves] of best
+  
+  ;Set the Fitness Score Monitor Variable
+  set fitness-score [fitness] of best
+  
+  LOG::PRINT-EXPERIMENT-LOG
+  
+
+END
+
+
+
+
+
+
+
+;-----------------------------------------------------
+; FUNCTION: evaluate
+; ---------------------------------------------------
+; 
+; DESCRIPTION:
+; ----------------------------------------------------
+; Evaluates a specific robot of 'id'
+;-----------------------------------------------------
+TO EVO::EVALUATE [explorer-id]
+
+        ask patches
+          [
+            set plabel " "
+            set Pcounter 0
+          ]
+  clear-drawing
+  
+  ask explorer explorer-id [set phenotype jGE:phenotype [genotype] of explorer explorer-id "BNF-RULESET" codon-size maximum-wraps]
+  
+  
+  if not empty? [phenotype] of explorer explorer-id [
+    set found-goal-state? false
+    set obstacle-infront-counter 0
+    set turn-counter 0
+    set steps 0
+    ;added by syed
+    
+    
+    EVO::SIMULATE explorer-id
+    set valid-robots valid-robots + 1
+    
+    ask explorer explorer-id [
+      set valid? true  
+      
+;     let bonus 0
+;     set bonus calculation * Pcounter 
+;     set fitness  (( ( maximum-step-count + steps ) + (bonus * 5) ) - 5000) + (turn-counter * 2)
+      
+      
+      if steps = maximum-step-count
+        [
+          set fitness calculate-codelength2
+        ]
+      set moves steps
+      
+    ]      
+  ]
+end
+
+
+
+
+
+;;Simulates the SFT Problem in order to calculate the Fitness Value of an robot.
+;-----------------------------------------------------
+; FUNCTION: simulate
+; ---------------------------------------------------
+; 
+; DESCRIPTION:
+; ----------------------------------------------------
+; Run the code from the explorers phenotype so that
+; the performance can be analysed.
+;-----------------------------------------------------
+TO EVO::SIMULATE [explorer-id]
+  
+  ; String to store the NetLogo code
+  let actions (word "ask explorer " explorer-id " [\n " [phenotype] of explorer explorer-id " \n]") 
+  ; Loop condition - false when in an illegal state
+  let go-on true
+  
+  ask explorer explorer-id [show-turtle]
+  
+  while [go-on = true] [
+    
+    ifelse (steps < maximum-step-count); and (found-goal-state? = false)
+    
+      [run actions]
+      [set go-on false]
+    
+  ]
+  
+  ask explorer explorer-id [hide-turtle]
+END
+
+
+
+
+
+
+
+;-----------------------------------------------------
+; FUNCTION: create-child-population
+; ---------------------------------------------------
+; 
+; DESCRIPTION:
+; ----------------------------------------------------
+; Create an population of children
+;-----------------------------------------------------
+TO EVO::CREATE-CHILD-POPULATION [genomes] 
+  clear-turtles
+  clear-drawing
+  
+        ask patches
+          [
+            set plabel " "
+            set Pcounter 0
+          ]
+  
+  create-explorers population-size [
+    hide-turtle
+    
+    set shape "explorer"
+    set size 2
+    set xcor 28
+    set ycor -28
+    set heading 315
+    set color blue
+    
+    
+    set genotype array:item genomes who
+    set phenotype ""
+    set valid? false
+    set fitness 0
+    set moves 0
+  ]
+end
+
+
+
+
+
+
+;-----------------------------------------------------
+; REPORTER: roulette-wheel
+; ---------------------------------------------------
+; 
+; DESCRIPTION:
+; ----------------------------------------------------
+; Using the classical genetic algorithm roulette
+; wheel selection algorithm, this reporter chooses
+; two genotypes to be returned.
+; ---------------------------------------------------
+;
+; RETURNS:
+; ----------------------------------------------------
+; A list of two randomly selected genotypes
+;-----------------------------------------------------
+TO-REPORT EVO::ROULETTE-WHEEL
+  
+  let x 0
+  let r 0
+  let total-fitness 0
+  let current-sum 0
+  let g1 ""
+  let g2 ""
+  
+  ;;caclulate total sum of fitness of the whole population
+  while [x < Population-Size] [
+    set total-fitness total-fitness + [fitness] of array:item population x
+    set x x + 1  
+    
+  ]
+  
+  ;;get the first genome
+  set r random total-fitness
+  set current-sum 0
+  set x 0  
+  while [x < population-size] [
+    set current-sum current-sum + [fitness] of array:item population x
+    if current-sum >= r [
+      set g1 [genotype] of array:item population x
+      set x Population-Size      
+    ]    
+    set x x + 1    
+  ]
+  
+  ;;get the second genome
+  set r random total-fitness
+  set current-sum 0
+  set x 0  
+  while [x < Population-Size] [
+    set current-sum current-sum + [fitness] of array:item population x
+    if current-sum >= r [
+      set g2 [genotype] of array:item population x
+      set x Population-Size
+    ]    
+    set x x + 1    
+  ]
+  
+  report list g1 g2
+  
+end
+
+
+
+
+
+
+
+
+
+
+;-----------------------------------------------------
+; FUNCTION: create-explorer-bots
+; ---------------------------------------------------
+; 
+; DESCRIPTION:
+; ----------------------------------------------------
+; Create N robot with set start properties.
+;-----------------------------------------------------
+TO EVO::CREATE-EXPLORER-BOTS [amount hide]
+  create-explorers amount [
+    
+    if (hide)[
+      hide-turtle
+    ]
+    
+    
+    
+    set shape "explorer"
+    set size 2
+    set xcor 28
+    set ycor -28
+    set heading 315
+    set color blue
+    
+    
+
+    set genotype jGE:individual codon-size codon-min codon-max
+    set phenotype ""
+    set valid? false
+    set fitness 0
+    set moves 0
+    
+  ]
+END
+
+
+
+
+
+
+;-----------------------------------------------------
+; REPORTER: best-individuals
+; ---------------------------------------------------
+; 
+; DESCRIPTION:
+; ----------------------------------------------------
+; Retrieve the NUM best genotypes from the population
+; ---------------------------------------------------
+;
+; RETURNS:
+; ----------------------------------------------------
+; A list of NUM genotype strings
+;-----------------------------------------------------
+to-report EVO::BEST-INDIVIDUALS [num]
+  report n-values num [n -> [genotype] of array:item population n] 
+  
+end
+
+
+
+
+
+;-----------------------------------------------------
+; REPORTER: create-genome-pool
+; ---------------------------------------------------
+; 
+; DESCRIPTION:
+; ----------------------------------------------------
+; Creates an empty array of strings which will be
+; used to store genomes of a population.
+; ---------------------------------------------------
+;
+; RETURNS:
+; ----------------------------------------------------
+; A genome array to be used by a generation
+;-----------------------------------------------------
+TO-REPORT EVO::CREATE-GENOME-POOL
+  report array:from-list n-values Population-Size [""]  
+END
+
+
+
+
+
+
+;-----------------------------------------------------
+; REPORTER: normalise-gap
+; ---------------------------------------------------
+; 
+; DESCRIPTION:
+; ----------------------------------------------------
+; Normalises the number of individuals to be replaced
+; in the next generation.
+; ---------------------------------------------------
+;
+; RETURNS:
+; ----------------------------------------------------
+; An even number larger than 0
+;-----------------------------------------------------
+TO-REPORT EVO::NORMALISE-GAP
+  let replacements  int (Generation-Gap * Population-Size)  
+  if replacements mod 2 != 0 [set replacements replacements - 1]
+  if replacements <= 0 [set replacements 2]    
+  report replacements  
+END
+
+
+
+
+
+
+;;ARRAY OF THE 5 ATTRIBUTES OF robotS.
+;;Reports the best of the two given robots which are compared according to their attributes
+TO-REPORT EVO::COMPARE-FITNESS [a1 a2]   
+  if array:item a1 3 > array:item a2 3 [report a1]                ;compare fitness
+  if array:item a1 3 < array:item a2 3 [report a2]                ;compare fitness
+  if array:item a1 4 < array:item a2 4 [report a1]                ;compare steps if fitness is equal
+  if array:item a1 4 > array:item a2 4 [report a2]                ;compare steps if fitness is equal  
+  if length array:item a1 1 < length array:item a2 1 [report a1]  ;compare phenotype length if fitness, and steps are equal
+  if length array:item a1 1 > length array:item a2 1 [report a2]  ;compare phenotype length if fitness, and steps are equal
+  if length array:item a1 0 < length array:item a2 0 [report a1]  ;compare genotype length if phenotype length, fitness, and steps are equal
+  if length array:item a1 0 > length array:item a2 0 [report a2]  ;compare genotype length if phenotype length, fitness, and steps are equal
+  ifelse random 2 = 1 [report a1] [report a2]                     ;returns randomly one of the two given robots         
+END
+

@@ -1,0 +1,7 @@
+<expr> ::= <actions> | <expr> <actions>
+<actions> ::= <sensingaction1> | <turn> | <move>
+<sensingaction1> ::= ifelse (ROBOT::COLOUR-AHEAD? <colours>) [ <turn> ][ <actions> ]
+<colours> ::= 9.9 | 45 | 55 | 95 
+<turn> ::=  ROBOT::RIGHT <angle> | ROBOT::LEFT <angle>
+<move> ::= ROBOT::FORWARD
+<angle> ::= 05 | 10 | 15 | 20 | 25 | 25 | 30 | 35 | 40 | 45 | 50 | 55 |  60 | 65 | 70 | 75 | 80 | 85 | 90 | 95 | 100 | 105 | 110 | 115 | 120 
